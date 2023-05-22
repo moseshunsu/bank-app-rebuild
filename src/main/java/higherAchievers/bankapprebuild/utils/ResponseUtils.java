@@ -10,6 +10,10 @@ public class ResponseUtils {
     public  static final int LENGTH_OF_ACCOUNT_NUMBER = 10;
     public static final String SUCCESS = "002";
     public static final String USER_SUCCESS_MESSAGE = "User successfully registered!";
+    public static final String SUCCESS_MESSAGE = "Successfully Done!";
+    public static final String USER_NOT_FOUND_MESSAGE = "This user doesn't exists";
+    public static final String USER_NOT_FOUND_CODE = "003";
+
 
     public static String generateAccountNumber(int length) {
         String accountnumber = "";
