@@ -1,9 +1,6 @@
 package higherAchievers.bankapprebuild.service;
 
-import higherAchievers.bankapprebuild.dto.Data;
-import higherAchievers.bankapprebuild.dto.Response;
-import higherAchievers.bankapprebuild.dto.TransactionRequest;
-import higherAchievers.bankapprebuild.dto.UserRequest;
+import higherAchievers.bankapprebuild.dto.*;
 import higherAchievers.bankapprebuild.entity.User;
 import higherAchievers.bankapprebuild.repository.UserRepository;
 import higherAchievers.bankapprebuild.utils.ResponseUtils;
@@ -17,9 +14,11 @@ import java.util.List;
 public class UserServiceImpl implements  UserService {
 
     private UserRepository userRepository;
+    private TransactionService transactionService;
 
-    public UserServiceImpl(UserRepository userRepository) {
+    public UserServiceImpl(UserRepository userRepository, TransactionService transactionService) {
         this.userRepository = userRepository;
+        this.transactionService = transactionService;
     }
 
     @Override
@@ -175,6 +174,13 @@ public class UserServiceImpl implements  UserService {
 
         receivingUser.setAccountBalance(receivingUser.getAccountBalance().add(transactionRequest.getAmount()));
         userRepository.save(receivingUser);
+
+        TransactionDto transactionDto = new TransactionDto();
+        transactionDto.setTransactionType("Credit");
+        transactionDto.setAccountNumber(transactionRequest.getAccountNumber());
+        transactionDto.setAmount(transactionRequest.getAmount());
+
+        transactionService.saveTransaction(transactionDto);
 
         return Response.builder()
                 .responseCode(ResponseUtils.USER_EXISTS_CODE)
