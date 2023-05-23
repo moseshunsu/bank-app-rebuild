@@ -2,6 +2,7 @@ package higherAchievers.bankapprebuild.service;
 
 import higherAchievers.bankapprebuild.dto.Data;
 import higherAchievers.bankapprebuild.dto.Response;
+import higherAchievers.bankapprebuild.dto.TransactionRequest;
 import higherAchievers.bankapprebuild.dto.UserRequest;
 import higherAchievers.bankapprebuild.entity.User;
 import higherAchievers.bankapprebuild.repository.UserRepository;
@@ -20,6 +21,7 @@ public class UserServiceImpl implements  UserService {
     public UserServiceImpl(UserRepository userRepository) {
         this.userRepository = userRepository;
     }
+
     @Override
     public Response registerUser(UserRequest userRequest) {
         /**
@@ -156,6 +158,66 @@ public class UserServiceImpl implements  UserService {
                 .data(Data.builder()
                         .accountNumber(user.getAccountNumber())
                         .accountName(user.getFirstName() + " " + user.getLastName())
+                        .build())
+                .build();
+    }
+
+    @Override
+    public Response credit(TransactionRequest transactionRequest) {
+        User receivingUser = userRepository.findByAccountNumber(transactionRequest.getAccountNumber());
+        if (!userRepository.existsByAccountNumber(transactionRequest.getAccountNumber())) {
+            return Response.builder()
+                    .responseCode(ResponseUtils.USER_NOT_FOUND_CODE)
+                    .responseMessage(ResponseUtils.USER_NOT_FOUND_MESSAGE)
+                    .data(null)
+                    .build();
+        }
+
+        receivingUser.setAccountBalance(receivingUser.getAccountBalance().add(transactionRequest.getAmount()));
+        userRepository.save(receivingUser);
+
+        return Response.builder()
+                .responseCode(ResponseUtils.USER_EXISTS_CODE)
+                .responseMessage(ResponseUtils.SUCCESS_MESSAGE)
+                .data(Data.builder()
+                        .accountName(receivingUser.getFirstName() + " " + receivingUser.getLastName())
+                        .accountBalance(receivingUser.getAccountBalance())
+                        .accountNumber(receivingUser.getAccountNumber())
+                        .build())
+                .build();
+    }
+
+    @Override
+    public Response debit(TransactionRequest transactionRequest) {
+        User receivingUser = userRepository.findByAccountNumber(transactionRequest.getAccountNumber());
+        if (!userRepository.existsByAccountNumber(transactionRequest.getAccountNumber())) {
+            return Response.builder()
+                    .responseCode(ResponseUtils.USER_NOT_FOUND_CODE)
+                    .responseMessage(ResponseUtils.USER_NOT_FOUND_MESSAGE)
+                    .data(null)
+                    .build();
+        }
+
+        if (receivingUser.getAccountBalance().compareTo(transactionRequest.getAmount()) > 0) {
+            receivingUser.setAccountBalance(receivingUser.getAccountBalance().subtract(transactionRequest.getAmount()));
+            userRepository.save(receivingUser);
+            return Response.builder()
+                    .responseCode(ResponseUtils.SUCCESSFUL_TRANSACTION)
+                    .responseMessage(ResponseUtils.ACCOUNT_DEBITED)
+                    .data(Data.builder()
+                            .accountName(receivingUser.getFirstName() + " " + receivingUser.getLastName())
+                            .accountBalance(receivingUser.getAccountBalance())
+                            .accountNumber(receivingUser.getAccountNumber())
+                            .build())
+                    .build();
+        }
+        return Response.builder()
+                .responseMessage(ResponseUtils.UNSUCCESSFUL_TRANSACTION)
+                .responseCode(ResponseUtils.INSUFFICIENT_BALANCE)
+                .data(Data.builder()
+                        .accountName(receivingUser.getFirstName() + " " + receivingUser.getLastName())
+                        .accountBalance(receivingUser.getAccountBalance())
+                        .accountNumber(receivingUser.getAccountNumber())
                         .build())
                 .build();
     }

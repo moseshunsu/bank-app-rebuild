@@ -2,6 +2,7 @@ package higherAchievers.bankapprebuild.controller;
 
 
 import higherAchievers.bankapprebuild.dto.Response;
+import higherAchievers.bankapprebuild.dto.TransactionRequest;
 import higherAchievers.bankapprebuild.dto.UserRequest;
 import higherAchievers.bankapprebuild.service.UserService;
 import org.springframework.web.bind.annotation.*;
@@ -42,4 +43,15 @@ public class UserController {
     public Response nameEnquiry(@RequestParam (name = "accountNumber") String accountNumber) {
         return userService.nameEnquiry(accountNumber);
     }
+
+    @PutMapping("/credit")
+    public Response credit(@RequestBody TransactionRequest transactionRequest) {
+        return userService.credit(transactionRequest);
+    }
+
+    @PutMapping("/debit")
+    public Response debit(@RequestBody TransactionRequest transactionRequest) {
+        return userService.debit(transactionRequest);
+    }
+
 }

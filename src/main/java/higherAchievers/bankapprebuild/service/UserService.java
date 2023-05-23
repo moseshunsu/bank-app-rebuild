@@ -1,6 +1,7 @@
 package higherAchievers.bankapprebuild.service;
 
 import higherAchievers.bankapprebuild.dto.Response;
+import higherAchievers.bankapprebuild.dto.TransactionRequest;
 import higherAchievers.bankapprebuild.dto.UserRequest;
 
 import java.util.List;
@@ -11,4 +12,6 @@ public interface UserService {
     Response fetchUser(Long userId);
     Response balanceEnquiry(String accountNumber);
     Response nameEnquiry(String accountNumber);
+    Response credit(TransactionRequest transactionRequest);
+    Response debit(TransactionRequest transactionRequest);
 }
