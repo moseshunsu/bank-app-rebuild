@@ -4,7 +4,8 @@ import higherAchievers.bankapprebuild.dto.*;
 import higherAchievers.bankapprebuild.entity.User;
 import higherAchievers.bankapprebuild.repository.UserRepository;
 import higherAchievers.bankapprebuild.utils.ResponseUtils;
-import jdk.dynalink.linker.LinkerServices;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -88,19 +89,19 @@ public class UserServiceImpl implements  UserService {
     }
 
     @Override
-    public Response fetchUser(Long userId) {
+    public ResponseEntity<Response> fetchUser(Long userId) {
 
         if (!userRepository.existsById(userId)) {
-            return Response.builder()
+            return new ResponseEntity<>(Response.builder()
                     .responseCode(ResponseUtils.USER_NOT_FOUND_CODE)
                     .responseMessage(ResponseUtils.USER_NOT_FOUND_MESSAGE)
                     .data(null)
-                    .build();
+                    .build(), HttpStatus.NOT_FOUND);
         }
 
         User user = userRepository.findById(userId).get();
 
-        return Response.builder()
+        return new ResponseEntity<>(Response.builder()
                 .responseMessage(ResponseUtils.SUCCESS_MESSAGE)
                 .responseCode(ResponseUtils.USER_EXISTS_CODE)
                 .data(Data.builder()
@@ -108,27 +109,27 @@ public class UserServiceImpl implements  UserService {
                         .accountBalance(user.getAccountBalance())
                         .accountNumber(user.getAccountNumber())
                         .build())
-                .build();
+                .build(), HttpStatus.OK);
 
     }
 
     @Override
-    public Response balanceEnquiry(String accountNumber) {
+    public ResponseEntity<Response> balanceEnquiry(String accountNumber) {
         /**
          * check if accNum exists
          * return the balance info
          */
         boolean isAccountExists = userRepository.existsByAccountNumber(accountNumber);
         if (!isAccountExists) {
-            return Response.builder()
+            return new ResponseEntity<>(Response.builder()
                     .responseCode(ResponseUtils.USER_NOT_FOUND_CODE)
                     .responseMessage(ResponseUtils.USER_NOT_FOUND_MESSAGE)
                     .data(null)
-                    .build();
+                    .build(), HttpStatus.NOT_FOUND);
         }
         User user = userRepository.findByAccountNumber(accountNumber);
 
-        return Response.builder()
+        return new ResponseEntity<>(Response.builder()
                 .responseMessage(ResponseUtils.SUCCESS_MESSAGE)
                 .responseCode(ResponseUtils.USER_EXISTS_CODE)
                 .data(Data.builder()
@@ -136,40 +137,42 @@ public class UserServiceImpl implements  UserService {
                         .accountBalance(user.getAccountBalance())
                         .accountName(user.getFirstName() + " " + user.getLastName())
                         .build())
-                .build();
+                .build(), HttpStatus.OK);
     }
 
     @Override
-    public Response nameEnquiry(String accountNumber) {
+    public ResponseEntity<Response> nameEnquiry(String accountNumber) {
         boolean isAccountExists = userRepository.existsByAccountNumber(accountNumber);
         if (!isAccountExists) {
-            return Response.builder()
+            return new ResponseEntity<>(Response.builder()
                     .responseCode(ResponseUtils.USER_NOT_FOUND_CODE)
                     .responseMessage(ResponseUtils.USER_NOT_FOUND_MESSAGE)
                     .data(null)
-                    .build();
+                    .build(), HttpStatus.NOT_FOUND);
         }
         User user = userRepository.findByAccountNumber(accountNumber);
 
-        return Response.builder()
+        return new ResponseEntity<>(Response.builder()
                 .responseMessage(ResponseUtils.SUCCESS_MESSAGE)
                 .responseCode(ResponseUtils.USER_EXISTS_CODE)
                 .data(Data.builder()
                         .accountNumber(user.getAccountNumber())
                         .accountName(user.getFirstName() + " " + user.getLastName())
                         .build())
-                .build();
+                .build(), HttpStatus.OK);
     }
 
     @Override
-    public Response credit(TransactionRequest transactionRequest) {
+    public ResponseEntity<Response> credit(TransactionRequest transactionRequest) {
         User receivingUser = userRepository.findByAccountNumber(transactionRequest.getAccountNumber());
         if (!userRepository.existsByAccountNumber(transactionRequest.getAccountNumber())) {
-            return Response.builder()
+            return new ResponseEntity<>(Response.builder()
                     .responseCode(ResponseUtils.USER_NOT_FOUND_CODE)
                     .responseMessage(ResponseUtils.USER_NOT_FOUND_MESSAGE)
-                    .data(null)
-                    .build();
+                    .data(Data.builder()
+                            .accountNumber(transactionRequest.getAccountNumber())
+                            .build())
+                    .build(), HttpStatus.BAD_REQUEST);
         }
 
         receivingUser.setAccountBalance(receivingUser.getAccountBalance().add(transactionRequest.getAmount()));
@@ -182,7 +185,7 @@ public class UserServiceImpl implements  UserService {
 
         transactionService.saveTransaction(transactionDto);
 
-        return Response.builder()
+        return new ResponseEntity<>(Response.builder()
                 .responseCode(ResponseUtils.USER_EXISTS_CODE)
                 .responseMessage(ResponseUtils.SUCCESS_MESSAGE)
                 .data(Data.builder()
@@ -190,24 +193,36 @@ public class UserServiceImpl implements  UserService {
                         .accountBalance(receivingUser.getAccountBalance())
                         .accountNumber(receivingUser.getAccountNumber())
                         .build())
-                .build();
+                .build(), HttpStatus.ACCEPTED);
     }
 
     @Override
-    public Response debit(TransactionRequest transactionRequest) {
+    public ResponseEntity<Response> debit(TransactionRequest transactionRequest) {
         User receivingUser = userRepository.findByAccountNumber(transactionRequest.getAccountNumber());
         if (!userRepository.existsByAccountNumber(transactionRequest.getAccountNumber())) {
-            return Response.builder()
+            return new ResponseEntity<>(Response.builder()
                     .responseCode(ResponseUtils.USER_NOT_FOUND_CODE)
                     .responseMessage(ResponseUtils.USER_NOT_FOUND_MESSAGE)
-                    .data(null)
-                    .build();
+                    .data(Data.builder()
+                            .accountNumber(transactionRequest.getAccountNumber())
+                            .build())
+                    .build(), HttpStatus.NOT_FOUND);
         }
 
         if (receivingUser.getAccountBalance().compareTo(transactionRequest.getAmount()) > 0) {
-            receivingUser.setAccountBalance(receivingUser.getAccountBalance().subtract(transactionRequest.getAmount()));
+
+            receivingUser.setAccountBalance(receivingUser.getAccountBalance().subtract
+                    (transactionRequest.getAmount()));
             userRepository.save(receivingUser);
-            return Response.builder()
+
+            TransactionDto transactionDto = new TransactionDto();
+            transactionDto.setAmount(transactionRequest.getAmount());
+            transactionDto.setTransactionType("Debit");
+            transactionDto.setAccountNumber(transactionRequest.getAccountNumber());
+
+            transactionService.saveTransaction(transactionDto);
+
+            return new ResponseEntity<>(Response.builder()
                     .responseCode(ResponseUtils.SUCCESSFUL_TRANSACTION)
                     .responseMessage(ResponseUtils.ACCOUNT_DEBITED)
                     .data(Data.builder()
@@ -215,9 +230,10 @@ public class UserServiceImpl implements  UserService {
                             .accountBalance(receivingUser.getAccountBalance())
                             .accountNumber(receivingUser.getAccountNumber())
                             .build())
-                    .build();
+                    .build(), HttpStatus.ACCEPTED);
         }
-        return Response.builder()
+
+        return new ResponseEntity<>(Response.builder()
                 .responseMessage(ResponseUtils.UNSUCCESSFUL_TRANSACTION)
                 .responseCode(ResponseUtils.INSUFFICIENT_BALANCE)
                 .data(Data.builder()
@@ -225,6 +241,39 @@ public class UserServiceImpl implements  UserService {
                         .accountBalance(receivingUser.getAccountBalance())
                         .accountNumber(receivingUser.getAccountNumber())
                         .build())
-                .build();
+                .build(), HttpStatus.BAD_REQUEST);
     }
+
+    @Override
+    public ResponseEntity<Response> transfer(TransferRequest transferRequest) {
+
+        boolean receiverExist = userRepository.existsByAccountNumber(transferRequest.getDestinationAccountNumber());
+
+        if (receiverExist) {
+
+            ResponseEntity<Response> debitResponse = debit(new TransactionRequest(transferRequest.getSourceAccountNumber(),
+                    transferRequest.getAmount()));
+
+            if (debitResponse.getStatusCode() != HttpStatus.ACCEPTED) {
+                return debitResponse;
+            }
+
+            credit(new TransactionRequest(transferRequest.getDestinationAccountNumber(), transferRequest.getAmount()));
+            return new ResponseEntity<>(Response.builder()
+                    .responseCode(ResponseUtils.SUCCESS)
+                    .responseMessage(ResponseUtils.SUCCESS_MESSAGE)
+                    .build(), HttpStatus.OK);
+        }
+
+        return new ResponseEntity<>(Response.builder()
+                .responseMessage(ResponseUtils.USER_NOT_FOUND_MESSAGE)
+                .responseCode(ResponseUtils.USER_NOT_FOUND_CODE)
+                .data(Data.builder()
+                        .accountNumber(transferRequest.getDestinationAccountNumber())
+                        .build())
+                .build(), HttpStatus.BAD_REQUEST);
+
+    }
+
 }
+
