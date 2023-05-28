@@ -1,6 +1,8 @@
 package higherAchievers.bankapprebuild.service;
 
 import higherAchievers.bankapprebuild.dto.*;
+import higherAchievers.bankapprebuild.email.dto.EmailDetails;
+import higherAchievers.bankapprebuild.email.service.EmailService;
 import higherAchievers.bankapprebuild.entity.User;
 import higherAchievers.bankapprebuild.repository.UserRepository;
 import higherAchievers.bankapprebuild.utils.ResponseUtils;
@@ -16,10 +18,13 @@ public class UserServiceImpl implements  UserService {
 
     private UserRepository userRepository;
     private TransactionService transactionService;
+    private EmailService emailService;
 
-    public UserServiceImpl(UserRepository userRepository, TransactionService transactionService) {
+    public UserServiceImpl(UserRepository userRepository, TransactionService transactionService,
+                           EmailService emailService) {
         this.userRepository = userRepository;
         this.transactionService = transactionService;
+        this.emailService = emailService;
     }
 
     @Override
@@ -40,6 +45,7 @@ public class UserServiceImpl implements  UserService {
 
         }
 
+
         User user = User.builder()
                 .firstName(userRequest.getFirstName())
                 .lastName(userRequest.getLastName())
@@ -56,6 +62,25 @@ public class UserServiceImpl implements  UserService {
                 .dateOfBirth(userRequest.getDateOfBirth())
                 .build();
         User savedUser = userRepository.save(user);
+
+
+        EmailDetails emailDetails = EmailDetails.builder()
+                .subject("ACCOUNT CREATION")
+                .recipient(userRequest.getEmail())
+                .messageBody(
+                        "Dear " + userRequest.getFirstName() + " " + " " + userRequest.getOtherName() + " " +
+                                userRequest.getLastName() +
+                                ", your account has been successful created and your balance is N"
+                                + userRequest.getAccountBalance() + "." +
+                                "\n\nKindly note that this is demo mail, and that it exists sorely for test " +
+                                "purposes." +
+                                "\n\n\nBest Regards, \n\nMoses Hunsu."
+                )
+                .attachment("C:\\Users\\moses.hunsu\\Documents\\Account test demo.txt")
+                .build();
+
+        emailService.sendMailWithAttachment(emailDetails);
+
 
         return Response.builder()
                 .responseCode(ResponseUtils.SUCCESS)
