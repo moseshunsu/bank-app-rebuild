@@ -4,6 +4,9 @@ import higherAchievers.bankapprebuild.dto.Response;
 import higherAchievers.bankapprebuild.dto.TransactionRequest;
 import higherAchievers.bankapprebuild.dto.TransferRequest;
 import higherAchievers.bankapprebuild.dto.UserRequest;
+import higherAchievers.bankapprebuild.email.dto.EmailDetails;
+import higherAchievers.bankapprebuild.entity.AlertType;
+import higherAchievers.bankapprebuild.entity.User;
 import org.springframework.http.ResponseEntity;
 
 import java.util.List;
@@ -17,4 +20,5 @@ public interface UserService {
     ResponseEntity<Response> credit(TransactionRequest transactionRequest);
     ResponseEntity<Response> debit(TransactionRequest transactionRequest);
     ResponseEntity<Response> transfer(TransferRequest transferRequest);
+    EmailDetails emailDetails(AlertType alert, AlertType alert1, User user, TransactionRequest transactionRequest);
 }

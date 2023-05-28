@@ -3,6 +3,7 @@ package higherAchievers.bankapprebuild.service;
 import higherAchievers.bankapprebuild.dto.*;
 import higherAchievers.bankapprebuild.email.dto.EmailDetails;
 import higherAchievers.bankapprebuild.email.service.EmailService;
+import higherAchievers.bankapprebuild.entity.AlertType;
 import higherAchievers.bankapprebuild.entity.User;
 import higherAchievers.bankapprebuild.repository.UserRepository;
 import higherAchievers.bankapprebuild.utils.ResponseUtils;
@@ -210,6 +211,9 @@ public class UserServiceImpl implements  UserService {
 
         transactionService.saveTransaction(transactionDto);
 
+        emailService.sendSimpleMail(emailDetails(AlertType.CREDIT, AlertType.credited, receivingUser,
+                transactionRequest));
+
         return new ResponseEntity<>(Response.builder()
                 .responseCode(ResponseUtils.USER_EXISTS_CODE)
                 .responseMessage(ResponseUtils.SUCCESS_MESSAGE)
@@ -223,7 +227,7 @@ public class UserServiceImpl implements  UserService {
 
     @Override
     public ResponseEntity<Response> debit(TransactionRequest transactionRequest) {
-        User receivingUser = userRepository.findByAccountNumber(transactionRequest.getAccountNumber());
+        User debitingUser = userRepository.findByAccountNumber(transactionRequest.getAccountNumber());
         if (!userRepository.existsByAccountNumber(transactionRequest.getAccountNumber())) {
             return new ResponseEntity<>(Response.builder()
                     .responseCode(ResponseUtils.USER_NOT_FOUND_CODE)
@@ -234,11 +238,11 @@ public class UserServiceImpl implements  UserService {
                     .build(), HttpStatus.NOT_FOUND);
         }
 
-        if (receivingUser.getAccountBalance().compareTo(transactionRequest.getAmount()) > 0) {
+        if (debitingUser.getAccountBalance().compareTo(transactionRequest.getAmount()) > 0) {
 
-            receivingUser.setAccountBalance(receivingUser.getAccountBalance().subtract
+            debitingUser.setAccountBalance(debitingUser.getAccountBalance().subtract
                     (transactionRequest.getAmount()));
-            userRepository.save(receivingUser);
+            userRepository.save(debitingUser);
 
             TransactionDto transactionDto = new TransactionDto();
             transactionDto.setAmount(transactionRequest.getAmount());
@@ -247,13 +251,17 @@ public class UserServiceImpl implements  UserService {
 
             transactionService.saveTransaction(transactionDto);
 
+            emailService.sendSimpleMail(emailDetails(AlertType.DEBIT, AlertType.debited, debitingUser,
+                    transactionRequest));
+
+
             return new ResponseEntity<>(Response.builder()
                     .responseCode(ResponseUtils.SUCCESSFUL_TRANSACTION)
                     .responseMessage(ResponseUtils.ACCOUNT_DEBITED)
                     .data(Data.builder()
-                            .accountName(receivingUser.getFirstName() + " " + receivingUser.getLastName())
-                            .accountBalance(receivingUser.getAccountBalance())
-                            .accountNumber(receivingUser.getAccountNumber())
+                            .accountName(debitingUser.getFirstName() + " " + debitingUser.getLastName())
+                            .accountBalance(debitingUser.getAccountBalance())
+                            .accountNumber(debitingUser.getAccountNumber())
                             .build())
                     .build(), HttpStatus.ACCEPTED);
         }
@@ -262,9 +270,9 @@ public class UserServiceImpl implements  UserService {
                 .responseMessage(ResponseUtils.UNSUCCESSFUL_TRANSACTION)
                 .responseCode(ResponseUtils.INSUFFICIENT_BALANCE)
                 .data(Data.builder()
-                        .accountName(receivingUser.getFirstName() + " " + receivingUser.getLastName())
-                        .accountBalance(receivingUser.getAccountBalance())
-                        .accountNumber(receivingUser.getAccountNumber())
+                        .accountName(debitingUser.getFirstName() + " " + debitingUser.getLastName())
+                        .accountBalance(debitingUser.getAccountBalance())
+                        .accountNumber(debitingUser.getAccountNumber())
                         .build())
                 .build(), HttpStatus.BAD_REQUEST);
     }
@@ -297,6 +305,30 @@ public class UserServiceImpl implements  UserService {
                         .accountNumber(transferRequest.getDestinationAccountNumber())
                         .build())
                 .build(), HttpStatus.BAD_REQUEST);
+
+    }
+
+    @Override
+    public EmailDetails emailDetails(AlertType alert, AlertType alert1, User user,
+                                     TransactionRequest transactionRequest) {
+
+        return EmailDetails
+                .builder()
+                .recipient(user.getEmail())
+                .subject(alert + " ALERT")
+                .messageBody(
+                        "Dear " + user.getFirstName() + " " + " " + user.getOtherName() + " " +
+                                user.getLastName() +
+                                ", your account has been " + alert1 +
+                                " with N" + transactionRequest.getAmount() +
+                                ", and your account balance is N"
+                                + user.getAccountBalance() + "." +
+                                "\n\nKindly note that this is demo mail, and that it exists sorely for test " +
+                                "purposes." +
+                                "\n\n\nBest Regards, \n\nMoses Hunsu."
+                )
+                .build();
+
 
     }
 
