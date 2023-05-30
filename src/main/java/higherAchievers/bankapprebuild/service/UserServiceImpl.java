@@ -6,6 +6,9 @@ import higherAchievers.bankapprebuild.email.service.EmailService;
 import higherAchievers.bankapprebuild.entity.AlertType;
 import higherAchievers.bankapprebuild.entity.User;
 import higherAchievers.bankapprebuild.repository.UserRepository;
+import higherAchievers.bankapprebuild.sms.domain.AlertMessage;
+import higherAchievers.bankapprebuild.sms.domain.Recipient;
+import higherAchievers.bankapprebuild.sms.service.AlertService;
 import higherAchievers.bankapprebuild.utils.ResponseUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,12 +23,14 @@ public class UserServiceImpl implements  UserService {
     private UserRepository userRepository;
     private TransactionService transactionService;
     private EmailService emailService;
+    private AlertService alertService;
 
     public UserServiceImpl(UserRepository userRepository, TransactionService transactionService,
-                           EmailService emailService) {
+                           EmailService emailService, AlertService alertService) {
         this.userRepository = userRepository;
         this.transactionService = transactionService;
         this.emailService = emailService;
+        this.alertService = alertService;
     }
 
     @Override
@@ -69,18 +74,42 @@ public class UserServiceImpl implements  UserService {
                 .subject("ACCOUNT CREATION")
                 .recipient(userRequest.getEmail())
                 .messageBody(
-                        "Dear " + userRequest.getFirstName() + " " + " " + userRequest.getOtherName() + " " +
-                                userRequest.getLastName() +
-                                ", your account has been successful created and your balance is N"
-                                + userRequest.getAccountBalance() + "." +
-                                "\n\nKindly note that this is demo mail, and that it exists sorely for test " +
-                                "purposes." +
-                                "\n\n\nBest Regards, \n\nMoses Hunsu."
+                        "Dear " + userRequest.getFirstName().toUpperCase() + " " +
+                        userRequest.getOtherName().toUpperCase() + " " +
+                        userRequest.getLastName().toUpperCase() +
+                        ", your account has been successful created. Your Acc. No. is " +
+                        user.getAccountNumber() + " and your balance is N" +
+                        userRequest.getAccountBalance() + "." +
+                        "\n\nKindly note that this is demo mail, and that it exists sorely for test " +
+                        "purposes." +
+                        "\n\n\nBest Regards, \n\nMoses Hunsu."
                 )
                 .attachment("C:\\Users\\moses.hunsu\\Documents\\Account test demo.txt")
                 .build();
 
+        Recipient recipient = Recipient
+                .builder()
+                .phoneNumber(userRequest.getPhoneNumber())
+                .firstName(userRequest.getFirstName())
+                .lastName(userRequest.getLastName())
+                .build();
+
+        AlertMessage alertMessage = AlertMessage
+                .builder()
+                .message(
+                        "Dear " + userRequest.getFirstName().toUpperCase() + " " +
+                        userRequest.getOtherName().toUpperCase() + " " +
+                        userRequest.getLastName().toUpperCase() +
+                        ", welcome to Moses Bank App. Your Acc. No. is " + user.getAccountNumber() +
+                        ".\nKindly note that this is demo message, and that it exists sorely for test " +
+                        "purposes." +
+                        "\nBest Regards, Moses Hunsu."
+                )
+                .build();
+
+
         emailService.sendMailWithAttachment(emailDetails);
+        alertService.sendSMS(recipient, alertMessage);
 
 
         return Response.builder()
@@ -214,6 +243,11 @@ public class UserServiceImpl implements  UserService {
         emailService.sendSimpleMail(emailDetails(AlertType.CREDIT, AlertType.credited, receivingUser,
                 transactionRequest));
 
+        alertService.sendSMS(
+                recipient(receivingUser),
+                alertMessage(AlertType.credited, receivingUser, transactionRequest)
+        );
+
         return new ResponseEntity<>(Response.builder()
                 .responseCode(ResponseUtils.USER_EXISTS_CODE)
                 .responseMessage(ResponseUtils.SUCCESS_MESSAGE)
@@ -253,6 +287,11 @@ public class UserServiceImpl implements  UserService {
 
             emailService.sendSimpleMail(emailDetails(AlertType.DEBIT, AlertType.debited, debitingUser,
                     transactionRequest));
+
+            alertService.sendSMS(
+                    recipient(debitingUser),
+                    alertMessage(AlertType.credited, debitingUser, transactionRequest)
+            );
 
 
             return new ResponseEntity<>(Response.builder()
@@ -317,8 +356,9 @@ public class UserServiceImpl implements  UserService {
                 .recipient(user.getEmail())
                 .subject(alert + " ALERT")
                 .messageBody(
-                        "Dear " + user.getFirstName() + " " + " " + user.getOtherName() + " " +
-                                user.getLastName() +
+                        "Dear " + user.getFirstName().toUpperCase() + " " +
+                                user.getOtherName().toUpperCase() + " " +
+                                user.getLastName().toUpperCase() +
                                 ", your account has been " + alert1 +
                                 " with N" + transactionRequest.getAmount() +
                                 ", and your account balance is N"
@@ -329,8 +369,33 @@ public class UserServiceImpl implements  UserService {
                 )
                 .build();
 
-
     }
 
+    @Override
+    public AlertMessage alertMessage(AlertType alert1, User user, TransactionRequest transactionRequest) {
+        return AlertMessage.builder()
+                .message(
+                        "Dear " + user.getFirstName().toUpperCase() + " " +
+                        user.getOtherName().toUpperCase() + " " +
+                        user.getLastName().toUpperCase() +
+                        ", your account has been " + alert1 +
+                        " with N" + transactionRequest.getAmount() +
+                        ", and your account balance is N"
+                        + user.getAccountBalance() + "." +
+                        ".\nKindly note that this is demo message, and that it exists sorely for test " +
+                        "purposes." +
+                        "\nBest Regards, Moses Hunsu."
+                )
+                .build();
+    }
+
+    @Override
+    public Recipient recipient(User user) {
+        return Recipient.builder()
+                .lastName(user.getLastName())
+                .firstName(user.getFirstName())
+                .phoneNumber(user.getPhoneNumber())
+                .build();
+    }
 }
 

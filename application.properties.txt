@@ -15,3 +15,8 @@ spring.mail.username=yourmail@gmail.com
 spring.mail.password=***
 spring.mail.properties.mail.smtp.auth=true
 spring.mail.properties.mail.smtp.starttls.enable=true
+
+#Twilio platform credentials
+twilio.account.sid=<your-twilio-account-sid>
+twilio.auth.token=<your-twilio-auth-token>
+twilio.phone.number=<your-twilio-phone-number>
