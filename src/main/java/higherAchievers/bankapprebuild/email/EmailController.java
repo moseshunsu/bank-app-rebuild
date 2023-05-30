@@ -2,6 +2,7 @@ package higherAchievers.bankapprebuild.email;
 
 import higherAchievers.bankapprebuild.email.dto.EmailDetails;
 import higherAchievers.bankapprebuild.email.service.EmailService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -10,6 +11,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/email")
+@Tag(
+        name = "Email Service REST APIs/Endpoint",
+        description = "Endpoints for Manipulating Email Services"
+)
 public class EmailController {
 
     @Autowired
