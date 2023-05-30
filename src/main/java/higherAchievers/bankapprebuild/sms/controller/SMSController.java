@@ -21,7 +21,7 @@ public class SMSController {
 
     @PostMapping("api/sms")
     public void sendSMS(@RequestBody AlertMessage alertMessage) {
-        Recipient recipient = new Recipient("Moses", "Hunsu", "+2349122235325");
+        Recipient recipient = new Recipient("...", "...", "+23....");
         alertService.sendSMS(recipient, alertMessage);
     }
 
